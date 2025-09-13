@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-TW" prefix="og: https://ogp.me/ns#" class="js" style="--flatsome--header--sticky-height: 130px;"><head>
 	<meta charset="UTF-8">
-	<link rel="profile" href="http://1005.com/">
-	<link rel="pingback" href="http://1005.com/">
+	<link rel="profile" href="[http://1005.com/](https://khcheat.com/xmlrpc.php)">
+	<link rel="pingback" href="[http://1005.com/](https://khcheat.com/xmlrpc.php)">
 
 	<script id="facebook-jssdk" src="https://connect.facebook.net/zh_TW/sdk/xfbml.customerchat.js"></script><script>(function(html){html.className = html.className.replace(/\bno-js\b/,'js')})(document.documentElement);</script>
 	<style>img:is([sizes="auto" i], [sizes^="auto," i]) { contain-intrinsic-size: 3000px 1500px }</style>
