@@ -434,8 +434,8 @@
                 },
                 'g11': { 
                     id: 'g11', name: '電馭叛客 2077', 
-                    image: 'https://images.unsplash.com/photo-1694932148443-696a1a1fde83?q=80&w=400&auto=format&fit=crop',
-                    banner: 'https://images.unsplash.com/photo-1694932148443-696a1a1fde83?q=80&w=1920&auto=format&fit=crop',
+                    image: 'https://th.bing.com/th/id/OIP.24u_T3I2o4InpIY-B_e24QHaEK?w=263&h=180&c=7&r=0&o=7&dpr=2.3&pid=1.7&rm=3'
+                    banner: 'https://th.bing.com/th/id/OIP.24u_T3I2o4InpIY-B_e24QHaEK?w=263&h=180&c=7&r=0&o=7&dpr=2.3&pid=1.7&rm=3',
                     description: '《電馭叛客 2077》是一款開放世界動作冒險角色扮演遊戲，故事發生在渴望權力、魅惑與身體改造的巨型都市「夜城」。使用輔助獲得無限金錢、技能點，成為夜城傳奇。',
                     packages: [ { duration: '天卡', price: 200 }, { duration: '周卡', price: 1000 }, { duration: '月卡', price: 3000 }, { duration: '永久', price: 8000 } ],
                     requirements: { os: 'Windows 10', processor: 'Intel Core i7-6700', memory: '12 GB RAM', graphics: 'NVIDIA GTX 1060 6GB' }
