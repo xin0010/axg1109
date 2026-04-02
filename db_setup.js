@@ -1,5 +1,5 @@
 /**
- * AXG 凱欣商店 - 企業級資料庫初始化腳本 (MySQL)
+ * HACK小舖 - 企業級資料庫初始化腳本 (MySQL)
  * 包含：密碼雜湊(bcrypt)、關聯式資料表(Foreign Keys)、交易一致性設計
  * * 執行方式： node db_setup.js
  */
@@ -10,9 +10,9 @@ const { v4: uuidv4 } = require('uuid');
 // GCP 資料庫連線設定 (沿用你原本的設定)
 const dbConfig = {
     host: '34.81.99.227',
-    user: 'axgshop200',
+    user: 'hackmap',
     password: 'axg-02210825A',
-    database: 'axf',
+    database: 'hackmap',
     port: 3306
 };
 
