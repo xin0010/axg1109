@@ -104,8 +104,8 @@ async function setupDatabase() {
 
         // 建立一組預設管理員帳號
         const adminId = uuidv4();
-        const adminEmail = 'admin@axgshop.com';
-        const plainPassword = 'admin'; // 登入用的明文密碼
+        const adminEmail = 'admin01@gmail.com';
+        const plainPassword = 'admin987987'; // 登入用的明文密碼
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(plainPassword, saltRounds); // 加密過程
 
