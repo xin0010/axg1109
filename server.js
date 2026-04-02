@@ -70,7 +70,7 @@ const pool = mysql.createPool({
     host: '34.81.99.227',
     user: 'hackmap',
     password: 'axg-02210825A',
-    database: 'axf',
+    database: 'hackmap',
     port: 3306,
     waitForConnections: true,
     connectionLimit: 10,
