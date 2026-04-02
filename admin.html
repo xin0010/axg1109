@@ -333,6 +333,15 @@
                 } catch (err) {}
             };
 
+            const handlePermanentDeleteProduct = async (id, name) => {
+                if (!confirm(`⚠️ 警告：確定要永久刪除商品「${name}」嗎？\n此操作將同時刪除所有卡密，且無法復原！`)) return;
+                try {
+                    const res = await authFetch(`/api/products/${id}/permanent`, { method: 'DELETE' });
+                    if (res.ok) fetchProducts();
+                    else alert('❌ 刪除失敗');
+                } catch (err) { alert('❌ 發生系統錯誤'); }
+            };
+
             const formatDate = (dateString) => new Date(dateString).toLocaleString('zh-TW', { hour12: false });
 
             const openModal = (product = null) => {
@@ -503,8 +512,9 @@
                                                         <td className="px-6 py-4 text-gray-300">{p.stock}</td>
                                                         <td className="px-6 py-4 text-right space-x-3">
                                                             <button onClick={() => openKeyModal(p)} title="卡密庫存管理" className="text-cyan-600 hover:text-cyan-400 mr-2 bg-cyan-900/30 px-2 py-1 rounded border border-cyan-800"><i className="fas fa-key"></i> 卡密</button>
-                                                            <button onClick={() => openModal(p)} className="text-gray-400 hover:text-cyan-400"><i className="fas fa-edit"></i></button>
-                                                            {p.status === 'active' && <button onClick={() => handleDeleteProduct(p.id)} className="text-gray-400 hover:text-red-500"><i className="fas fa-eye-slash"></i></button>}
+                                                            <button onClick={() => openModal(p)} title="編輯商品" className="text-gray-400 hover:text-cyan-400"><i className="fas fa-edit"></i></button>
+                                                            {p.status === 'active' && <button onClick={() => handleDeleteProduct(p.id)} title="下架商品" className="text-gray-400 hover:text-yellow-500 ml-2"><i className="fas fa-eye-slash"></i></button>}
+                                                            <button onClick={() => handlePermanentDeleteProduct(p.id, p.name)} title="永久刪除" className="text-gray-500 hover:text-red-500 ml-2 border border-transparent hover:border-red-900 px-1.5 py-0.5 rounded transition-colors"><i className="fas fa-trash-alt"></i></button>
                                                         </td>
                                                     </tr>
                                                 ))}

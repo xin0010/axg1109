@@ -314,6 +314,22 @@ app.delete('/api/products/:id', adminAuth, async (req, res) => {
     } catch (err) { res.status(500).json({ error: '下架失敗' }); }
 });
 
+app.delete('/api/products/:id/permanent', adminAuth, async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        await conn.execute(`DELETE FROM product_keys WHERE product_id = ?`, [req.params.id]);
+        await conn.execute(`DELETE FROM products WHERE id = ?`, [req.params.id]);
+        await conn.commit();
+        res.json({ message: '商品已永久刪除' });
+    } catch (err) {
+        await conn.rollback();
+        res.status(500).json({ error: '刪除失敗' });
+    } finally {
+        conn.release();
+    }
+});
+
 // ==========================================
 // 💡 全新模組：卡密金庫 API
 // ==========================================
