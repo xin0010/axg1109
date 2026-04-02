@@ -45,10 +45,8 @@ const app = express();
 
 app.use(cors({
     origin: [
-        'https://chenshop123.com.tw',
-        'https://www.chenshop123.com.tw',
-        'https://chenshop888.netlify.app',
-        'http://localhost:3000'
+        'https://1005-henna-topaz.vercel.app',
+        'http://localhost:3306'
     ],
     credentials: true
 }));
@@ -154,7 +152,7 @@ app.post('/api/auth/send-code', async (req, res) => {
             from: '"YEN小舖" <yang20080221@gmail.com>', // 已更新為 YEN小舖
             to: email,
             subject: 'YEN小舖 - 您的專屬驗證碼',
-            text: `您的驗證碼為：${code}\n請在 10 分鐘內返回 https://chenshop123.com.tw 完成綁定。`
+            text: `您的驗證碼為：${code}\n請在 10 分鐘內返回 https://1005-henna-topaz.vercel.app 完成綁定。`
         });
         res.json({ success: true, message: '驗證碼已發送' });
     } catch (err) { res.status(500).json({ error: '寄件失敗' }); }
