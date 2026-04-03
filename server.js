@@ -244,7 +244,7 @@ app.get('/api/member/orders', async (req, res) => {
         const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
         if (users.length === 0) return res.json([]);
         const [orders] = await pool.query(
-            `SELECT o.id, o.total_price, o.status, o.created_at, COUNT(oi.id) as item_count
+            `SELECT o.id, o.total_price, o.status, o.virtual_account, o.created_at, COUNT(oi.id) as item_count
              FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id
              WHERE o.user_id = ? GROUP BY o.id ORDER BY o.created_at DESC`,
             [users[0].id]
