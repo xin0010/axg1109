@@ -235,7 +235,26 @@ app.post('/api/orders/checkout', async (req, res) => {
 });
 
 // ==========================================
-// 5. 後台 API (包含卡密管理)
+// 5. 會員前台 API
+// ==========================================
+app.get('/api/member/orders', async (req, res) => {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: '請提供信箱' });
+    try {
+        const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+        if (users.length === 0) return res.json([]);
+        const [orders] = await pool.query(
+            `SELECT o.id, o.total_price, o.status, o.created_at, COUNT(oi.id) as item_count
+             FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id
+             WHERE o.user_id = ? GROUP BY o.id ORDER BY o.created_at DESC`,
+            [users[0].id]
+        );
+        res.json(orders);
+    } catch (err) { res.status(500).json({ error: '查詢失敗' }); }
+});
+
+// ==========================================
+// 6. 後台 API (包含卡密管理)
 // ==========================================
 app.post('/api/announcement', adminAuth, async (req, res) => {
     try {
