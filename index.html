@@ -889,7 +889,7 @@
                                                                                 <span className="text-gray-500 font-normal text-xs ml-1 hidden sm:inline">(共 {order.item_count} 件)</span>
                                                                             </td>
                                                                             <td className="p-4">
-                                                                                <button onClick={() => showAlert(`訂單編號：${order.id}\n狀態：${s.label}\n金額：NT$${parseFloat(order.total_price).toLocaleString()}\n建立時間：${new Date(order.created_at).toLocaleString('zh-TW', { hour12: false })}\n\n繳費帳號（郵政700）：\n${order.virtual_account || '無資料'}`, '訂單詳情')}
+                                                                                <button onClick={() => showAlert(`訂單編號：${order.id}\n狀態：${s.label}\n金額：NT$${parseFloat(order.total_price).toLocaleString()}\n建立時間：${new Date(order.created_at).toLocaleString('zh-TW', { hour12: false })}\n\n繳費帳號（郵政700）：\n00812680112040`, '訂單詳情')}
                                                                                     className="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-1.5 text-xs font-bold tracking-wider transition-colors whitespace-nowrap">
                                                                                     查看
                                                                                 </button>
