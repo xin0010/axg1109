@@ -41,7 +41,10 @@
             
             const [userEmail, setUserEmail] = useState(localStorage.getItem('axg_user_email') || ''); 
             const [verifyCode, setVerifyCode] = useState(''); 
-            const [countdown, setCountdown] = useState(0);    
+            const [countdown, setCountdown] = useState(0);
+            const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+            const [userPassword, setUserPassword] = useState('');
+            const [regPassword, setRegPassword] = useState('');    
             
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
@@ -194,22 +197,47 @@
             };
 
             const handleBindEmail = async () => {
-                if (!userEmail || !verifyCode) return showAlert('請輸入信箱與驗證碼', 'WARNING');
+                if (!userEmail || !verifyCode || !regPassword) return showAlert('請填寫所有欄位', 'WARNING');
+                if (regPassword.length < 6) return showAlert('密碼至少需要 6 個字元', 'WARNING');
                 try {
-                    const response = await fetch('/api/auth/verify-code', {
+                    const response = await fetch('/api/auth/member/register', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: userEmail, code: verifyCode })
+                        body: JSON.stringify({ email: userEmail, password: regPassword, code: verifyCode })
                     });
                     if (response.ok) {
                         localStorage.setItem('axg_user_email', userEmail);
                         setIsLoginOpen(false);
+                        setVerifyCode('');
+                        setRegPassword('');
                         showAlert('帳號註冊成功！', 'SUCCESS');
                     } else {
                         const data = await response.json();
-                        showAlert(data.error || '驗證碼錯誤', 'ERROR');
+                        showAlert(data.error || '註冊失敗', 'ERROR');
                     }
-                } catch (err) { showAlert('驗證失敗', 'ERROR'); }
+                } catch (err) { showAlert('註冊失敗', 'ERROR'); }
+            };
+
+            const handleMemberLogin = async () => {
+                if (!userEmail || !userPassword) return showAlert('請輸入信箱與密碼', 'WARNING');
+                try {
+                    const response = await fetch('/api/auth/member/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: userEmail, password: userPassword })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        localStorage.setItem('axg_user_email', data.email);
+                        setUserEmail(data.email);
+                        setUserPassword('');
+                        setIsLoginOpen(false);
+                        showAlert('登入成功！', 'SUCCESS');
+                    } else {
+                        const data = await response.json();
+                        showAlert(data.error || '登入失敗', 'ERROR');
+                    }
+                } catch (err) { showAlert('登入失敗', 'ERROR'); }
             };
 
             const fetchMemberOrders = async () => {
@@ -230,6 +258,8 @@
                     fetchMemberOrders();
                     window.scrollTo(0, 0);
                 } else {
+                    setAuthMode('login');
+                    setUserPassword('');
                     setIsLoginOpen(true);
                 }
             };
@@ -256,6 +286,7 @@
                 if (!userEmail) {
                     setIsLoginOpen(true);
                     showAlert('系統提示：請先註冊帳號才能結帳！', 'SYSTEM_NOTICE');
+                    setAuthMode('register');
                     return;
                 }
                 setAgreedToTerms(false); 
@@ -388,7 +419,7 @@
                                                 {product.helper_status === 'maintenance' || product.helper_status === 'danger' ? (
                                                     <button disabled className="w-full bg-gray-900 border-t border-gray-800 text-gray-500 py-3 font-bold tracking-widest flex items-center justify-center text-sm cursor-not-allowed"><i className="fas fa-ban mr-2"></i> TEMPORARILY DISABLED</button>
                                                 ) : (
-                                                    <button onClick={() => addToCart(product)} className="w-full bg-cyan-950/80 hover:bg-cyan-600 text-cyan-300 hover:text-black py-3 font-bold tracking-widest transition-colors flex items-center justify-center text-sm"><i className="fas fa-terminal mr-2"></i> EXECUTE / ADD</button>
+                                                    <button onClick={() => addToCart(product)} className="w-full bg-cyan-950/80 hover:bg-cyan-600 text-cyan-300 hover:text-black py-3 font-bold tracking-widest transition-colors flex items-center justify-center text-sm"><i className="fas fa-shopping-cart mr-2"></i> 購買</button>
                                                 )}
                                             </div>
                                         ))}
@@ -522,28 +553,63 @@
                                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsLoginOpen(false)}></div>
                                     <div className="w-full max-w-sm bg-[#0a0a0a] border border-cyan-500/50 p-8 relative z-10 shadow-[0_0_30px_rgba(34,211,238,0.15)]">
                                         <button onClick={() => setIsLoginOpen(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white"><i className="fas fa-times"></i></button>
-                                        <div className="text-center mb-8">
+                                        <div className="text-center mb-6">
                                             <div className="inline-block bg-cyan-600 text-black font-bold px-3 py-1 mb-4 transform -skew-x-12">SYSTEM_PORTAL</div>
-                                            <h2 className="text-xl text-white tracking-widest">註冊帳號</h2>
                                         </div>
-                                        <div className="space-y-6">
-                                            <div>
-                                                <label className="block text-xs text-cyan-600 tracking-widest mb-2">電子信箱</label>
-                                                <div className="flex space-x-2">
-                                                    <input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} disabled={countdown > 0} className="flex-grow bg-[#111] border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-cyan-500 disabled:opacity-50" placeholder="請輸入您的電子信箱" />
-                                                    <button type="button" onClick={handleSendCode} disabled={countdown > 0} className="bg-white hover:bg-gray-200 text-black px-4 py-3 font-bold text-sm whitespace-nowrap transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
-                                                        {countdown > 0 ? `${countdown}s` : '獲取代碼'}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs text-cyan-600 tracking-widest mb-2">驗證碼</label>
-                                                <input type="text" value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} className="w-full bg-[#111] border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-cyan-500" placeholder="請輸入6位驗證碼" />
-                                            </div>
-                                            <button onClick={handleBindEmail} className="w-full bg-cyan-900/50 border border-cyan-500 hover:bg-cyan-500 text-cyan-300 hover:text-black py-3 font-bold tracking-widest transition-colors">
-                                                REGISTER / 註冊
+                                        {/* 分頁切換 */}
+                                        <div className="flex mb-6 border border-gray-700">
+                                            <button onClick={() => { setAuthMode('login'); setVerifyCode(''); setRegPassword(''); }} className={`flex-1 py-2.5 text-sm font-bold tracking-widest transition-colors ${authMode === 'login' ? 'bg-cyan-700 text-white' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>
+                                                登入
+                                            </button>
+                                            <button onClick={() => { setAuthMode('register'); setUserPassword(''); }} className={`flex-1 py-2.5 text-sm font-bold tracking-widest transition-colors ${authMode === 'register' ? 'bg-cyan-700 text-white' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>
+                                                註冊
                                             </button>
                                         </div>
+
+                                        {/* 登入表單 */}
+                                        {authMode === 'login' && (
+                                            <div className="space-y-5">
+                                                <div>
+                                                    <label className="block text-xs text-cyan-600 tracking-widest mb-2">電子信箱</label>
+                                                    <input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} className="w-full bg-[#111] border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-cyan-500" placeholder="請輸入電子信箱" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-cyan-600 tracking-widest mb-2">密碼</label>
+                                                    <input type="password" value={userPassword} onChange={(e) => setUserPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleMemberLogin()} className="w-full bg-[#111] border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-cyan-500" placeholder="請輸入密碼" />
+                                                </div>
+                                                <button onClick={handleMemberLogin} className="w-full bg-cyan-900/50 border border-cyan-500 hover:bg-cyan-500 text-cyan-300 hover:text-black py-3 font-bold tracking-widest transition-colors">
+                                                    LOGIN / 登入
+                                                </button>
+                                                <p className="text-center text-gray-600 text-xs">還沒有帳號？<button onClick={() => setAuthMode('register')} className="text-cyan-500 hover:text-cyan-400 ml-1 underline">立即註冊</button></p>
+                                            </div>
+                                        )}
+
+                                        {/* 註冊表單 */}
+                                        {authMode === 'register' && (
+                                            <div className="space-y-5">
+                                                <div>
+                                                    <label className="block text-xs text-cyan-600 tracking-widest mb-2">電子信箱</label>
+                                                    <div className="flex space-x-2">
+                                                        <input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} disabled={countdown > 0} className="flex-grow bg-[#111] border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-cyan-500 disabled:opacity-50" placeholder="請輸入電子信箱" />
+                                                        <button type="button" onClick={handleSendCode} disabled={countdown > 0} className="bg-white hover:bg-gray-200 text-black px-4 py-3 font-bold text-sm whitespace-nowrap transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
+                                                            {countdown > 0 ? `${countdown}s` : '發送驗證'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-cyan-600 tracking-widest mb-2">驗證碼</label>
+                                                    <input type="text" value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} className="w-full bg-[#111] border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-cyan-500" placeholder="請輸入 6 位驗證碼" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-cyan-600 tracking-widest mb-2">設定密碼</label>
+                                                    <input type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} className="w-full bg-[#111] border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-cyan-500" placeholder="至少 6 個字元" />
+                                                </div>
+                                                <button onClick={handleBindEmail} className="w-full bg-cyan-900/50 border border-cyan-500 hover:bg-cyan-500 text-cyan-300 hover:text-black py-3 font-bold tracking-widest transition-colors">
+                                                    REGISTER / 註冊
+                                                </button>
+                                                <p className="text-center text-gray-600 text-xs">已有帳號？<button onClick={() => setAuthMode('login')} className="text-cyan-500 hover:text-cyan-400 ml-1 underline">立即登入</button></p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -801,7 +867,7 @@
                                                 <span>聯絡客服</span>
                                             </button>
                                             <div className="border-t border-gray-800 mt-2 pt-2">
-                                                <button onClick={() => { localStorage.removeItem('axg_user_email'); setUserEmail(''); setMemberOrders([]); setCurrentView('home'); window.scrollTo(0,0); }}
+                                                <button onClick={() => { localStorage.removeItem('axg_user_email'); setUserEmail(''); setUserPassword(''); setMemberOrders([]); setCurrentView('home'); window.scrollTo(0,0); }}
                                                     className="w-full text-left px-4 py-3 flex items-center space-x-3 text-sm font-bold tracking-wider text-red-500/80 hover:text-red-400 hover:bg-red-900/10 transition-colors border-l-2 border-transparent">
                                                     <i className="fas fa-sign-out-alt w-4 text-xs"></i>
                                                     <span>Logout</span>

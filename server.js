@@ -150,13 +150,46 @@ app.post('/api/auth/send-code', async (req, res) => {
     try {
         await pool.query('INSERT INTO email_codes (email, code, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE code = ?, expires_at = ?', [email, code, expiresAt, code, expiresAt]);
         await transporter.sendMail({
-            from: '"HACK小舖" <yang20080221@gmail.com>', // 已更新為 HACK小舖
+            from: '"HACK小舖" <yang20080221@gmail.com>',
             to: email,
             subject: 'HACK小舖 - 您的專屬驗證碼',
-            text: `您的驗證碼為：${code}\n請在 10 分鐘內返回 https://gemini-one-chi.vercel.app 完成綁定。`
+            text: `您的驗證碼為：${code}\n請在 10 分鐘內返回 https://gemini-one-chi.vercel.app 完成註冊。`
         });
         res.json({ success: true, message: '驗證碼已發送' });
     } catch (err) { res.status(500).json({ error: '寄件失敗' }); }
+});
+
+// 會員註冊 (信箱 + 密碼 + 驗證碼)
+app.post('/api/auth/member/register', async (req, res) => {
+    const { email, password, code } = req.body;
+    if (!email || !password || !code) return res.status(400).json({ error: '請填寫所有欄位' });
+    if (password.length < 6) return res.status(400).json({ error: '密碼至少需要 6 個字元' });
+    try {
+        const [rows] = await pool.query('SELECT * FROM email_codes WHERE email = ? AND code = ? AND expires_at > NOW()', [email, code]);
+        if (rows.length === 0) return res.status(400).json({ error: '驗證碼錯誤或已過期' });
+        await pool.query('DELETE FROM email_codes WHERE email = ?', [email]);
+        const passwordHash = await bcrypt.hash(password, 10);
+        const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+        if (existing.length > 0) {
+            await pool.query('UPDATE users SET password_hash = ? WHERE email = ?', [passwordHash, email]);
+        } else {
+            await pool.query('INSERT INTO users (id, email, password_hash, role) VALUES (?, ?, ?, ?)', [uuidv4(), email, passwordHash, 'customer']);
+        }
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: '註冊失敗' }); }
+});
+
+// 會員登入 (信箱 + 密碼)
+app.post('/api/auth/member/login', async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: '請填寫信箱與密碼' });
+    try {
+        const [users] = await pool.query('SELECT * FROM users WHERE email = ? AND role = ?', [email, 'customer']);
+        if (users.length === 0) return res.status(401).json({ error: '此信箱尚未註冊' });
+        const valid = await bcrypt.compare(password, users[0].password_hash);
+        if (!valid) return res.status(401).json({ error: '密碼錯誤' });
+        res.json({ success: true, email: users[0].email });
+    } catch (err) { res.status(500).json({ error: '登入失敗' }); }
 });
 
 app.post('/api/auth/verify-code', async (req, res) => {
