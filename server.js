@@ -102,6 +102,7 @@ pool.getConnection()
 
             try { await conn.query(`ALTER TABLE products ADD COLUMN helper_status VARCHAR(20) DEFAULT 'normal'`); } catch (e) {}
             try { await conn.query(`ALTER TABLE products ADD COLUMN description TEXT DEFAULT NULL`); } catch (e) {}
+            try { await conn.query(`ALTER TABLE products ADD COLUMN cost DECIMAL(10, 2) DEFAULT 0`); } catch (e) {}
 
             console.log('✅ 系統資料庫結構檢查完畢！');
         } catch (err) {
@@ -290,17 +291,17 @@ app.get('/api/admin/products', adminAuth, async (req, res) => {
 });
 
 app.post('/api/products', adminAuth, async (req, res) => {
-    const { category, name, price, stock, status, helper_status, description } = req.body;
+    const { category, name, price, stock, status, helper_status, description, cost } = req.body;
     try {
-        const [result] = await pool.execute(`INSERT INTO products (category, name, price, stock, status, helper_status, description) VALUES (?, ?, ?, ?, ?, ?, ?)`, [category, name, price, stock || 0, status || 'active', helper_status || 'normal', description || '']);
+        const [result] = await pool.execute(`INSERT INTO products (category, name, price, stock, status, helper_status, description, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [category, name, price, stock || 0, status || 'active', helper_status || 'normal', description || '', cost || 0]);
         res.status(201).json({ id: result.insertId });
     } catch (err) { res.status(500).json({ error: '新增失敗' }); }
 });
 
 app.put('/api/products/:id', adminAuth, async (req, res) => {
-    const { category, name, price, stock, status, helper_status, description } = req.body;
+    const { category, name, price, stock, status, helper_status, description, cost } = req.body;
     try {
-        await pool.execute(`UPDATE products SET category = ?, name = ?, price = ?, stock = ?, status = ?, helper_status = ?, description = ? WHERE id = ?`, [category, name, price, stock, status, helper_status || 'normal', description || '', req.params.id]);
+        await pool.execute(`UPDATE products SET category = ?, name = ?, price = ?, stock = ?, status = ?, helper_status = ?, description = ?, cost = ? WHERE id = ?`, [category, name, price, stock, status, helper_status || 'normal', description || '', cost || 0, req.params.id]);
         res.json({ message: '更新成功' });
     } catch (err) { res.status(500).json({ error: '更新失敗' }); }
 });

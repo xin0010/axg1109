@@ -62,6 +62,7 @@ async function setupDatabase() {
                 category VARCHAR(50) NOT NULL,
                 name VARCHAR(100) NOT NULL,
                 price DECIMAL(10, 2) NOT NULL,
+                cost DECIMAL(10, 2) NOT NULL DEFAULT 0 COMMENT '成本價',
                 stock INT NOT NULL DEFAULT 0 CHECK (stock >= 0),
                 status ENUM('active', 'inactive') DEFAULT 'active',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
