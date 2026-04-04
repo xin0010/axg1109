@@ -67,51 +67,56 @@ const transporter = nodemailer.createTransport({
 // 1. 資料庫連線池設定
 // ==========================================
 const pool = mysql.createPool({
-    host: '34.81.99.227',
-    user: 'hackmap',
-    password: 'axg-02210825A',
-    database: 'hackmap',
+    host: '127.0.0.1',
+    user: 'root',
+    password: 'Xin970416',
+    database: 'axgshop888',
     port: 3306,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    connectTimeout: 10000
 });
 
-pool.getConnection()
-    .then(async conn => {
-        console.log('✅ 資料庫連線池建立成功 (Vercel 雲端特化版)！');
-        
-        try {
-            await conn.query(`CREATE TABLE IF NOT EXISTS settings (id INT AUTO_INCREMENT PRIMARY KEY, setting_key VARCHAR(50) UNIQUE, setting_value TEXT)`);
-            await conn.query(`INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('announcement', '歡迎來到 HACK小舖！系統目前正常運作中。')`);
-            await conn.query(`CREATE TABLE IF NOT EXISTS email_codes (email VARCHAR(255) PRIMARY KEY, code VARCHAR(10), expires_at DATETIME)`);
-            await conn.query(`CREATE TABLE IF NOT EXISTS chat_messages (id INT AUTO_INCREMENT PRIMARY KEY, session_id VARCHAR(100) NOT NULL, user_email VARCHAR(255), sender VARCHAR(20) NOT NULL, message TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
-            
-            // 💡 核心新增：建立「卡密金庫」資料表
-            await conn.query(`
-                CREATE TABLE IF NOT EXISTS product_keys (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    product_id INT NOT NULL,
-                    key_code VARCHAR(255) NOT NULL,
-                    is_used BOOLEAN DEFAULT false,
-                    order_id VARCHAR(50) DEFAULT NULL,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE KEY unique_key_per_product (product_id, key_code)
-                )
-            `);
-
-            try { await conn.query(`ALTER TABLE products ADD COLUMN helper_status VARCHAR(20) DEFAULT 'normal'`); } catch (e) {}
-            try { await conn.query(`ALTER TABLE products ADD COLUMN description TEXT DEFAULT NULL`); } catch (e) {}
-            try { await conn.query(`ALTER TABLE products ADD COLUMN cost DECIMAL(10, 2) DEFAULT 0`); } catch (e) {}
-
-            console.log('✅ 系統資料庫結構檢查完畢！');
-        } catch (err) {
-            console.error('⚠️ 資料庫初始化過程發生異常:', err.message);
-        }
+let dbInitialized = false;
+async function ensureDbInit() {
+    if (dbInitialized) return;
+    const conn = await pool.getConnection();
+    try {
+        await conn.query(`CREATE TABLE IF NOT EXISTS settings (id INT AUTO_INCREMENT PRIMARY KEY, setting_key VARCHAR(50) UNIQUE, setting_value TEXT)`);
+        await conn.query(`INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('announcement', '歡迎來到 HACK小舖！系統目前正常運作中。')`);
+        await conn.query(`CREATE TABLE IF NOT EXISTS email_codes (email VARCHAR(255) PRIMARY KEY, code VARCHAR(10), expires_at DATETIME)`);
+        await conn.query(`CREATE TABLE IF NOT EXISTS chat_messages (id INT AUTO_INCREMENT PRIMARY KEY, session_id VARCHAR(100) NOT NULL, user_email VARCHAR(255), sender VARCHAR(20) NOT NULL, message TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS product_keys (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                product_id INT NOT NULL,
+                key_code VARCHAR(255) NOT NULL,
+                is_used BOOLEAN DEFAULT false,
+                order_id VARCHAR(50) DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_key_per_product (product_id, key_code)
+            )
+        `);
+        try { await conn.query(`ALTER TABLE products ADD COLUMN helper_status VARCHAR(20) DEFAULT 'normal'`); } catch (e) {}
+        try { await conn.query(`ALTER TABLE products ADD COLUMN description TEXT DEFAULT NULL`); } catch (e) {}
+        try { await conn.query(`ALTER TABLE products ADD COLUMN cost DECIMAL(10, 2) DEFAULT 0`); } catch (e) {}
+        dbInitialized = true;
+    } finally {
         conn.release();
-    })
-    .catch(err => console.error('❌ 資料庫連線失敗：', err.message));
+    }
+}
 
+// 每個請求都先確保 DB 初始化完成
+app.use(async (req, res, next) => {
+    try {
+        await ensureDbInit();
+        next();
+    } catch (err) {
+        console.error('DB init error:', err.message);
+        res.status(500).json({ error: '資料庫連線失敗，請稍後再試' });
+    }
+});
 
 // ==========================================
 // 2. 客服對話 API

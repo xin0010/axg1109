@@ -9,10 +9,10 @@ const { v4: uuidv4 } = require('uuid');
 
 // GCP 資料庫連線設定 (沿用你原本的設定)
 const dbConfig = {
-    host: '34.81.99.227',
-    user: 'hackmap',
-    password: 'axg-02210825A',
-    database: 'hackmap',
+    host: '127.0.0.1',
+    user: 'root',
+    password: 'Xin970416',
+    database: 'axgshop888',
     port: 3306
 };
 
