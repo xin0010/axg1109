@@ -4,7 +4,8 @@
   "description": "AXG Cyber Assets Store",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "db:setup": "node db_setup.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

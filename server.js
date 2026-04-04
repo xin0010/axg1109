@@ -43,14 +43,27 @@ function adminAuth(req, res, next) {
 
 const app = express();
 
+function shouldUseMySqlSsl() {
+    return String(process.env.MYSQL_SSL || '').toLowerCase() === 'true';
+}
+
 app.use(cors({
     origin: [
         'https://gemini-one-chi.vercel.app',
-        'http://localhost:3306'
+        'https://axgshop888.com.tw',
+        'https://www.axgshop888.com.tw',
+        'https://axgshop1109.com.tw',
+        'https://www.axgshop1109.com.tw',
+        'http://localhost:3000'
     ],
     credentials: true
 }));
 app.use(express.json());
+app.use(express.static(__dirname));
+
+app.get('/health', (req, res) => {
+    res.json({ ok: true });
+});
 
 // ==========================================
 // 💡 設定 Google 寄信機器人 (Nodemailer)
@@ -63,19 +76,28 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+const initialProducts = [
+    { category: 'PUBG', name: 'IOS-月卡', price: 1035.00, stock: 999 },
+    { category: 'PUBG', name: '安卓-月卡', price: 1100.00, stock: 999 },
+    { category: '傳說對決', name: 'ios月卡', price: 1070.00, stock: 50 },
+    { category: '三角洲行動', name: '安卓單雷-月卡', price: 1300.00, stock: 30 },
+    { category: 'IOS證書', name: '保固40天證書', price: 200.00, stock: 999 }
+];
+
 // ==========================================
 // 1. 資料庫連線池設定
 // ==========================================
 const pool = mysql.createPool({
-    host: '127.0.0.1',
-    user: 'root',
-    password: 'Xin970416',
-    database: 'axgshop888',
-    port: 3306,
+    host: process.env.MYSQLHOST || '127.0.0.1',
+    user: process.env.MYSQLUSER || 'root',
+    password: process.env.MYSQLPASSWORD !== undefined ? process.env.MYSQLPASSWORD : '',
+    database: process.env.MYSQLDATABASE || 'axgshop888',
+    port: parseInt(process.env.MYSQLPORT || '3306'),
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 10000
+    connectTimeout: 10000,
+    ssl: shouldUseMySqlSsl() ? { rejectUnauthorized: false } : undefined
 });
 
 let dbInitialized = false;
@@ -83,6 +105,51 @@ async function ensureDbInit() {
     if (dbInitialized) return;
     const conn = await pool.getConnection();
     try {
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id VARCHAR(36) PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                role ENUM('admin', 'customer') DEFAULT 'customer',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS products (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                category VARCHAR(50) NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                price DECIMAL(10, 2) NOT NULL,
+                cost DECIMAL(10, 2) NOT NULL DEFAULT 0,
+                stock INT NOT NULL DEFAULT 0,
+                status ENUM('active', 'inactive') DEFAULT 'active',
+                helper_status VARCHAR(20) DEFAULT 'normal',
+                description TEXT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS orders (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL,
+                total_price DECIMAL(10, 2) NOT NULL,
+                status VARCHAR(50) DEFAULT 'pending',
+                virtual_account VARCHAR(50) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+            )
+        `);
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS order_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                order_id VARCHAR(36) NOT NULL,
+                product_id INT NOT NULL,
+                quantity INT NOT NULL,
+                unit_price DECIMAL(10, 2) NOT NULL,
+                FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
+            )
+        `);
         await conn.query(`CREATE TABLE IF NOT EXISTS settings (id INT AUTO_INCREMENT PRIMARY KEY, setting_key VARCHAR(50) UNIQUE, setting_value TEXT)`);
         await conn.query(`INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('announcement', '歡迎來到 HACK小舖！系統目前正常運作中。')`);
         await conn.query(`CREATE TABLE IF NOT EXISTS email_codes (email VARCHAR(255) PRIMARY KEY, code VARCHAR(10), expires_at DATETIME)`);
@@ -101,6 +168,26 @@ async function ensureDbInit() {
         try { await conn.query(`ALTER TABLE products ADD COLUMN helper_status VARCHAR(20) DEFAULT 'normal'`); } catch (e) {}
         try { await conn.query(`ALTER TABLE products ADD COLUMN description TEXT DEFAULT NULL`); } catch (e) {}
         try { await conn.query(`ALTER TABLE products ADD COLUMN cost DECIMAL(10, 2) DEFAULT 0`); } catch (e) {}
+
+        const [adminUsers] = await conn.query('SELECT id FROM users WHERE email = ?', ['admin01@gmail.com']);
+        if (!adminUsers.length) {
+            const adminPasswordHash = await bcrypt.hash('admin987987', 10);
+            await conn.query(
+                'INSERT INTO users (id, email, password_hash, role) VALUES (?, ?, ?, ?)',
+                [uuidv4(), 'admin01@gmail.com', adminPasswordHash, 'admin']
+            );
+        }
+
+        const [productCountRows] = await conn.query('SELECT COUNT(*) AS count FROM products');
+        if (!productCountRows[0].count) {
+            for (const product of initialProducts) {
+                await conn.query(
+                    'INSERT INTO products (category, name, price, stock, status, helper_status, description, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [product.category, product.name, product.price, product.stock, 'active', 'normal', '', 0]
+                );
+            }
+        }
+
         dbInitialized = true;
     } finally {
         conn.release();
@@ -435,9 +522,10 @@ app.delete('/api/admin/keys/:id', adminAuth, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`🚀 API 伺服器已啟動於：http://localhost:${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+if (!process.env.VERCEL) {
+    app.listen(PORT, HOST, () => {
+        console.log(`🚀 API 伺服器已啟動於：http://${HOST}:${PORT}`);
     });
 }
 module.exports = app;

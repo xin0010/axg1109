@@ -7,13 +7,18 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 
-// GCP 資料庫連線設定 (沿用你原本的設定)
+function shouldUseMySqlSsl() {
+    return String(process.env.MYSQL_SSL || '').toLowerCase() === 'true';
+}
+
+// GCP/一般雲端資料庫連線設定
 const dbConfig = {
-    host: '127.0.0.1',
-    user: 'root',
-    password: 'Xin970416',
-    database: 'axgshop888',
-    port: 3306
+    host: process.env.MYSQLHOST || '127.0.0.1',
+    user: process.env.MYSQLUSER || 'root',
+    password: process.env.MYSQLPASSWORD !== undefined ? process.env.MYSQLPASSWORD : '',
+    database: process.env.MYSQLDATABASE || 'axgshop888',
+    port: parseInt(process.env.MYSQLPORT || '3306'),
+    ssl: shouldUseMySqlSsl() ? { rejectUnauthorized: false } : undefined
 };
 
 // 初始商品清單
@@ -26,7 +31,7 @@ const initialProducts = [
 ];
 
 async function setupDatabase() {
-    console.log('⏳ 正在連線至 GCP Cloud SQL...');
+    console.log('⏳ 正在連線至 MySQL...');
     let connection;
 
     try {
@@ -43,7 +48,7 @@ async function setupDatabase() {
         // 2. 建立資料表 (Table Creation)
         // ==========================================
         
-        // A. 會員表 (Users) - 密碼嚴格加密
+        // A. 會員表 (Users)
         await connection.execute(`
             CREATE TABLE users (
                 id VARCHAR(36) PRIMARY KEY COMMENT 'UUID',
@@ -55,7 +60,7 @@ async function setupDatabase() {
         `);
         console.log('✔️ [users] 會員系統資料表準備就緒');
 
-        // B. 商品表 (Products) - 增加庫存檢查防禦
+        // B. 商品表 (Products)
         await connection.execute(`
             CREATE TABLE products (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -70,7 +75,7 @@ async function setupDatabase() {
         `);
         console.log('✔️ [products] 商品資料表準備就緒');
 
-        // C. 訂單主表 (Orders) - 紀錄金流虛擬帳號
+        // C. 訂單主表 (Orders)
         await connection.execute(`
             CREATE TABLE orders (
                 id VARCHAR(36) PRIMARY KEY COMMENT '訂單編號(UUID)',
@@ -84,7 +89,7 @@ async function setupDatabase() {
         `);
         console.log('✔️ [orders] 訂單主資料表準備就緒');
 
-        // D. 訂單明細表 (Order Items) - 鎖定結帳當下價格
+        // D. 訂單明細表 (Order Items)
         await connection.execute(`
             CREATE TABLE order_items (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -106,9 +111,9 @@ async function setupDatabase() {
         // 建立一組預設管理員帳號
         const adminId = uuidv4();
         const adminEmail = 'admin01@gmail.com';
-        const plainPassword = 'admin987987'; // 登入用的明文密碼
+        const plainPassword = 'admin987987'; 
         const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(plainPassword, saltRounds); // 加密過程
+        const hashedPassword = await bcrypt.hash(plainPassword, saltRounds);
 
         await connection.execute(
             'INSERT INTO users (id, email, password_hash, role) VALUES (?, ?, ?, ?)',
